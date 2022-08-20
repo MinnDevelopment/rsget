@@ -31,17 +31,7 @@ pub struct StreamPayload {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct StreamData {
-    pub id: String,
-    pub user_id: String,
-    pub user_name: String,
-    pub game_id: String,
-    #[serde(rename = "type")]
-    pub datum_type: String,
-    pub title: String,
-    pub viewer_count: i64,
-    pub started_at: String,
-    pub language: String,
-    pub thumbnail_url: String,
+    title: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -86,7 +76,7 @@ impl Streamable for Twitch {
         let twitch = Twitch {
             client,
             username: String::from(&cap[1]),
-            url: url.clone(),
+            url,
             client_id,
             access_token,
         };
@@ -94,12 +84,13 @@ impl Streamable for Twitch {
         Ok(Box::new(twitch))
     }
     async fn get_title(&self) -> StreamResult<String> {
-        if let Some(token) = &self.access_token {
+        if let Some(ref token) = self.access_token {
             let stream_url = format!(
                 "https://api.twitch.tv/helix/streams?user_login={}",
                 self.username
             );
-            let payload: StreamPayload = self
+
+            let mut payload: StreamPayload = self
                 .client
                 .get(&stream_url)
                 .header("Client-ID", &self.client_id)
@@ -113,8 +104,8 @@ impl Streamable for Twitch {
                     e
                 })?;
 
-            match payload.data.get(0) {
-                Some(data) => Ok(data.title.clone()),
+            match payload.data.pop() {
+                Some(data) => Ok(data.title),
                 None => Err(StreamError::Rsget(RsgetError::new(
                     "[Twitch] User is offline",
                 ))),
